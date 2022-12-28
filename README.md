@@ -22,12 +22,41 @@ y la segunda Task "SetLastPlayerDestination" selecciona como destino la posició
     }
 ```
 
-Luego, en el árbol de comportamiento 
+Luego, en el árbol de comportamiento añado "SaveLastPlayerPosition" dentro de "Flee" en el momento en el que decide huir del jugador:
 
+```
+tree("Flee")
+	sequence
+		while IsHealthLessThan(40.0)
+			while InDanger(50.0)
+				sequence
+					SaveLastPlayerPosition
+					TakeCover
+					MoveToDestination
+```
 
+Y en "LookAround" añado "SetLastPlayerDestination" y "MoveToDestination" para que busque primero al jugador en la posición en la que lo vió por última vez.
 
+```
+tree("LookAround")
+	while not IsHealthLessThan(40.0)
+		while not SeePlayer
+			sequence
+				SetLastPlayerDestination
+				MoveToDestination
+				random
+					Turn(90.0)
+					Turn(-90.0)
+					Turn(145.0)
+					Turn(-27.0)
+				LookAtTarget
+				WaitRandom(2.0,5.0)
+				random
+					Succeed
+					Fail
+```
 
 
 GIF con un ejemplo de la ejecución:
 
-![gif](./GIF/obstaculos.gif)
+![gif](./GIF/arbolComportamiento.gif)
