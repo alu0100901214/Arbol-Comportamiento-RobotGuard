@@ -1,7 +1,9 @@
 # Arbol Comportamiento RobotGuard
 ## Hacer el que el NPC vuelva a la última posición donde vio al jugador antes de huir. Debe volver después de que su salud se haya recuperado por encima de 40.
 
-Para realizar esta tarea, primero he creado 2 Tasks dentro de AI.cs, primero "SaveLastPlayerPosition" guarda la posición del jugador en el momento en el que hace el NPC hace "Flee":
+Para realizar esta tarea, he creado 4 Tasks dentro de AI.cs y un nuevo árbol en BotAI.BT.txt
+
+primero "SaveLastPlayerPosition" guarda la posición del jugador en el momento en el que hace el NPC hace "Flee":
 
 ```
     [Task]
@@ -11,13 +13,34 @@ Para realizar esta tarea, primero he creado 2 Tasks dentro de AI.cs, primero "Sa
     }
 ```
 
-y la segunda Task "SetLastPlayerDestination" selecciona como destino la posición guardada:
+La segunda Task "SetLastPlayerDestination" selecciona como destino la posición guardada en caso de que se haya memorizado la posición del jugador al hacer un "Flee":
 
 ```
     [Task]
     public void SetLastPlayerDestination() {
-        if(lastPlayerPos != null)
+        if(knowPlayerPos)
             agent.SetDestination(lastPlayerPos);
+        Task.current.Succeed();
+    }
+```
+
+La tercera Task "HasLastPlayerDestination" comprueba si se guardo la posición del jugador en un Flee:
+
+```
+    [Task]
+    public bool HasLastPlayerDestination() {
+        if(knowPlayerPos)
+            return true;
+        else return false;
+    }
+```
+
+Y la cuarta Task pone a false la variable booleana knowPlayerPos una vez acabada la busqueda del jugador:
+
+```
+    [Task] 
+    public void UnSetLastPlayerDestination(){
+        knowPlayerPos = false;
         Task.current.Succeed();
     }
 ```
@@ -35,27 +58,30 @@ tree("Flee")
 					MoveToDestination
 ```
 
-Y en "LookAround" añado "SetLastPlayerDestination" y "MoveToDestination" para que busque primero al jugador en la posición en la que lo vió por última vez.
+Creo un nuevo árbol de comportamiento llamado "LookPlayer" que comprueba en un while si se guardo la ultima posición del jugador despues de un "Flee", si es asi, se dirige a dicha posición y al final se vuelve la variable booleana knowPlayerPos a false.
+
+´´´
+tree("LookPlayer")
+	while HasLastPlayerDestination
+		sequence
+			SetLastPlayerDestination
+			MoveToDestination
+			UnSetLastPlayerDestination
+´´´
+
+Este árbol se añade en Patrol despues de comprobar que la vida no es menor que 40:
 
 ```
-tree("LookAround")
-	while not IsHealthLessThan(40.0)
-		while not SeePlayer
-			sequence
-				SetLastPlayerDestination
-				MoveToDestination
-				random
-					Turn(90.0)
-					Turn(-90.0)
-					Turn(145.0)
-					Turn(-27.0)
-				LookAtTarget
-				WaitRandom(2.0,5.0)
-				random
-					Succeed
-					Fail
+tree("Patrol")
+	fallback
+		tree("Flee")
+		while not IsHealthLessThan(40.0)
+			fallback
+				tree("LookPlayer")
+				tree("Attack")
+				tree("LookAround")
+				tree("Wander")
 ```
-
 
 GIF con un ejemplo de la ejecución:
 
